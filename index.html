@@ -822,6 +822,16 @@
     document.getElementById('appView').hidden = !loggedIn;
     document.getElementById('userChip').hidden = !loggedIn;
   }
+  function resetAuthView(){
+    document.getElementById('loginForm').reset();
+    document.getElementById('signupForm').reset();
+    setAuthMsg('', '');
+    document.querySelectorAll('[data-authtab]').forEach(function(b){
+      b.setAttribute('aria-selected', b.getAttribute('data-authtab') === 'login' ? 'true' : 'false');
+    });
+    document.getElementById('loginForm').style.display = 'flex';
+    document.getElementById('signupForm').style.display = 'none';
+  }
 
   document.querySelectorAll('[data-authtab]').forEach(function(btn){
     btn.addEventListener('click', function(){
@@ -910,6 +920,7 @@
         loadUserData(session.user);
       } else {
         state.days = {}; state.goal = DEFAULT_GOAL; state.goalEnabled = false; state.userId = null;
+        resetAuthView();
         setView(false);
         render();
       }
