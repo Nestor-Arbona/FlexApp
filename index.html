@@ -593,7 +593,7 @@
       var dd = new Date(d);
       dd.setDate(d.getDate()-i);
       var ds = fmtDate(dd);
-      arr.push({ date: ds, count: dayTotal(ds), weekday: WEEKDAY_SHORT[dd.getDay()], dayNum: dd.getDate(), isToday: ds === todayStr() });
+      arr.push({ date: ds, count: dayTotal(ds), weekday: WEEKDAY_SHORT[dd.getDay()], dayNum: dd.getDate(), monthIdx: dd.getMonth(), isToday: ds === todayStr() });
     }
     return arr;
   }
@@ -768,7 +768,15 @@
       var cls = item.isToday ? 'bar bar-today' : 'bar';
       parts.push('<rect class="'+cls+'" data-i="'+j+'" x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+barW.toFixed(1)+'" height="'+Math.max(barH,1).toFixed(1)+'" rx="3"></rect>');
       if(j % labelEvery === 0){
-        var tick = period === 'year' ? item.label : (period === 'month' ? item.dayNum : item.weekday);
+        var tick;
+        if(period === 'year'){
+          tick = item.label;
+          if(j === 0 || item.y !== data[j-1].y){ tick += ' \''+String(item.y).slice(-2); }
+        } else if(period === 'month'){
+          tick = item.dayNum+' '+MONTH_SHORT[item.monthIdx];
+        } else {
+          tick = item.weekday;
+        }
         parts.push('<text class="axis-label" x="'+cx.toFixed(1)+'" y="'+(H-8)+'" text-anchor="middle">'+tick+'</text>');
       }
     }
