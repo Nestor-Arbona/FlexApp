@@ -181,6 +181,10 @@
     border-radius:10px; padding:9px 16px; cursor:pointer; white-space:nowrap;
   }
   .btn:hover{ background:var(--accent-strong); }
+  .btn:disabled{ opacity:0.4; cursor:default; pointer-events:none; }
+  .btn-outline{ background:transparent; color:var(--ink); border:1px solid var(--line-strong); }
+  .btn-outline:hover{ background:var(--accent-soft); color:var(--accent-strong); border-color:var(--accent); }
+  .btn-outline:disabled{ opacity:0.4; cursor:default; pointer-events:none; }
 
   /* stats row */
   .stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
@@ -352,7 +356,8 @@
       </div>
       <form class="custom-row" id="customForm">
         <input type="number" min="1" step="1" id="customInput" placeholder="Otra cantidad">
-        <button class="btn" type="submit">Añadir</button>
+        <button class="btn" type="submit" id="customSubmitBtn">Añadir</button>
+        <button class="btn btn-outline" type="button" id="editLastBtn" disabled>Editar</button>
       </form>
     </div>
   </div>
@@ -430,7 +435,7 @@
 
   var RING_R = 56, RING_C = 2 * Math.PI * RING_R;
   var DEFAULT_GOAL = 50;
-  var state = { days: {}, goal: DEFAULT_GOAL, goalEnabled: false, userId: null };
+  var state = { days: {}, goal: DEFAULT_GOAL, goalEnabled: false, userId: null, editingIndex: null };
   var now0 = new Date();
   state.viewYear = now0.getFullYear();
   state.viewMonth = now0.getMonth();
@@ -515,6 +520,21 @@
     var total = sets.reduce(function(a,s){ return a+s.reps; }, 0);
     writeDay(d, { date:d, total:total, sets:sets, updatedAt: Date.now() });
   }
+  function editSet(index, newReps){
+    var d = todayStr();
+    var existing = state.days[d];
+    if(!existing || !existing.sets[index]) return;
+    var sets = existing.sets.slice();
+    sets[index] = { time: sets[index].time, reps: newReps };
+    var total = sets.reduce(function(a,s){ return a+s.reps; }, 0);
+    writeDay(d, { date:d, total:total, sets:sets, updatedAt: Date.now() });
+  }
+  function exitEditMode(){
+    state.editingIndex = null;
+    document.getElementById('customSubmitBtn').textContent = 'Añadir';
+    document.getElementById('editLastBtn').textContent = 'Editar';
+    document.getElementById('customInput').value = '';
+  }
 
   // ---- derived stats ----
   function dayTotal(dateStr){
@@ -595,6 +615,12 @@
 
     document.getElementById('todayCount').textContent = todayEntry.total;
     document.getElementById('goalValueText').textContent = goal;
+
+    var hasSets = !!(todayEntry.sets && todayEntry.sets.length);
+    if(state.editingIndex !== null && (!hasSets || state.editingIndex >= todayEntry.sets.length)){
+      exitEditMode();
+    }
+    document.getElementById('editLastBtn').disabled = !hasSets;
 
     var goalToggle = document.getElementById('goalToggle');
     goalToggle.setAttribute('aria-checked', state.goalEnabled ? 'true' : 'false');
@@ -755,7 +781,31 @@
     e.preventDefault();
     var input = document.getElementById('customInput');
     var v = parseInt(input.value,10);
-    if(v > 0){ addReps(v); input.value = ''; }
+    if(!(v > 0)) return;
+    if(state.editingIndex !== null){
+      editSet(state.editingIndex, v);
+      exitEditMode();
+    } else {
+      addReps(v);
+      input.value = '';
+    }
+  });
+  document.getElementById('editLastBtn').addEventListener('click', function(){
+    var d = todayStr();
+    var entry = state.days[d];
+    if(!entry || !entry.sets.length) return;
+    if(state.editingIndex !== null){
+      exitEditMode();
+      return;
+    }
+    var lastIndex = entry.sets.length - 1;
+    state.editingIndex = lastIndex;
+    var input = document.getElementById('customInput');
+    input.value = entry.sets[lastIndex].reps;
+    input.focus();
+    input.select();
+    document.getElementById('customSubmitBtn').textContent = 'Guardar';
+    document.getElementById('editLastBtn').textContent = 'Cancelar';
   });
   document.getElementById('logList').addEventListener('click', function(e){
     var btn = e.target.closest('[data-remove]');
