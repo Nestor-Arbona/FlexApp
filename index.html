@@ -115,9 +115,12 @@
   }
   .auth-form input:focus{ outline:2px solid var(--accent); outline-offset:1px; }
   .auth-submit{ margin-top:10px; }
-  .auth-msg{ font-size:12.5px; margin-top:10px; min-height:16px; }
+  .auth-msg{ display:flex; align-items:center; gap:6px; font-size:12.5px; margin-top:10px; min-height:18px; }
   .auth-msg.error{ color:var(--accent-strong); }
+  .auth-msg.success{ color:var(--accent2); }
   .auth-msg.info{ color:var(--ink-muted); }
+  .auth-msg-icon{ flex:none; width:18px; height:18px; display:flex; }
+  .auth-msg-icon svg{ width:100%; height:100%; }
   .setup-note{ font-size:13.5px; color:var(--ink-muted); line-height:1.5; margin-top:8px; }
   .setup-note code{ font-family:"IBM Plex Mono", monospace; font-size:12.5px; background:var(--surface-2); padding:1px 5px; border-radius:5px; }
 
@@ -796,11 +799,24 @@
   });
 
   // ---- auth ----
+  var CHECK_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 20.6 7.4 19.2 6z"></path></svg>';
+  var CROSS_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.3 5.7 12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7 4.3 4.3l6.3 6.3 6.3-6.3z"></path></svg>';
+
   function setAuthMsg(text, kind){
     var el = document.getElementById('authMsg');
-    el.textContent = text;
     el.className = 'auth-msg' + (kind ? ' '+kind : '');
+    el.innerHTML = '';
+    if(kind === 'success' || kind === 'error'){
+      var icon = document.createElement('span');
+      icon.className = 'auth-msg-icon';
+      icon.innerHTML = kind === 'success' ? CHECK_SVG : CROSS_SVG;
+      el.appendChild(icon);
+    }
+    var textEl = document.createElement('span');
+    textEl.textContent = text;
+    el.appendChild(textEl);
   }
+  function delay(ms){ return new Promise(function(resolve){ setTimeout(resolve, ms); }); }
   function setView(loggedIn){
     document.getElementById('authView').hidden = loggedIn;
     document.getElementById('appView').hidden = !loggedIn;
@@ -824,7 +840,11 @@
     var email = document.getElementById('loginEmail').value.trim();
     var password = document.getElementById('loginPassword').value;
     sb.auth.signInWithPassword({ email: email, password: password }).then(function(res){
-      if(res.error){ setAuthMsg(res.error.message === 'Invalid login credentials' ? 'Correo o contraseña incorrectos.' : res.error.message, 'error'); }
+      if(res.error){
+        setAuthMsg(res.error.message === 'Invalid login credentials' ? 'Correo o contraseña incorrectos.' : res.error.message, 'error');
+      } else {
+        setAuthMsg('Acceso correcto', 'success');
+      }
     });
   });
 
@@ -837,7 +857,9 @@
     var password = document.getElementById('signupPassword').value;
     sb.auth.signUp({ email: email, password: password, options: { data: { display_name: name } } }).then(function(res){
       if(res.error){ setAuthMsg(res.error.message, 'error'); return; }
-      if(!(res.data && res.data.session)){
+      if(res.data && res.data.session){
+        setAuthMsg('Cuenta creada', 'success');
+      } else {
         setAuthMsg('Cuenta creada. Revisa tu correo para confirmarla y luego inicia sesión.', 'info');
       }
     });
@@ -861,7 +883,8 @@
 
     Promise.all([
       sb.from('settings').select('daily_goal, goal_enabled').eq('user_id', user.id).single(),
-      sb.from('days').select('date, total, sets').eq('user_id', user.id).order('date', { ascending:false }).limit(400)
+      sb.from('days').select('date, total, sets').eq('user_id', user.id).order('date', { ascending:false }).limit(400),
+      delay(500)
     ]).then(function(results){
       var settingsRes = results[0], daysRes = results[1];
       state.goal = (settingsRes.data && settingsRes.data.daily_goal) || DEFAULT_GOAL;
