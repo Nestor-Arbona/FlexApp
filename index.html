@@ -12,6 +12,7 @@
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23e0481c'/%3E%3Crect x='24' y='58' width='12' height='24' rx='4' fill='white'/%3E%3Crect x='44' y='42' width='12' height='40' rx='4' fill='white'/%3E%3Crect x='64' y='26' width='12' height='56' rx='4' fill='white'/%3E%3C/svg%3E">
 <title>Racha de Flexiones</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js"></script>
 <style>
   :root{
     --bg:#edece4;
@@ -98,6 +99,27 @@
   .header-text{ display:flex; flex-direction:column; gap:1px; min-width:0; }
   .brand{ font-family:"Big Shoulders Display", ui-sans-serif, sans-serif; font-weight:800; font-size:22px; letter-spacing:0.01em; line-height:1; }
   .today-date{ font-size:12.5px; color:var(--ink-muted); text-transform:capitalize; }
+  .user-chip{ display:flex; align-items:center; gap:8px; margin-left:auto; flex:none; }
+  .user-name{ font-size:13px; font-weight:600; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .logout-btn{ border:1px solid var(--line-strong); background:var(--surface-2); color:var(--ink-muted); font-size:11.5px; font-weight:500; padding:5px 10px; border-radius:8px; cursor:pointer; white-space:nowrap; }
+  .logout-btn:hover{ background:var(--accent-soft); color:var(--accent-strong); border-color:var(--accent); }
+
+  /* auth */
+  #appView, #authView{ display:flex; flex-direction:column; gap:16px; }
+  .auth-form{ display:flex; flex-direction:column; gap:6px; margin-top:14px; }
+  .field-label{ font-size:12px; color:var(--ink-muted); margin-top:8px; }
+  .field-label:first-child{ margin-top:0; }
+  .auth-form input{
+    font-family:"IBM Plex Sans", sans-serif; font-size:14px; color:var(--ink);
+    background:var(--surface-2); border:1px solid var(--line-strong); border-radius:10px; padding:9px 10px;
+  }
+  .auth-form input:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+  .auth-submit{ margin-top:10px; }
+  .auth-msg{ font-size:12.5px; margin-top:10px; min-height:16px; }
+  .auth-msg.error{ color:var(--accent-strong); }
+  .auth-msg.info{ color:var(--ink-muted); }
+  .setup-note{ font-size:13.5px; color:var(--ink-muted); line-height:1.5; margin-top:8px; }
+  .setup-note code{ font-family:"IBM Plex Mono", monospace; font-size:12.5px; background:var(--surface-2); padding:1px 5px; border-radius:5px; }
 
   .card{
     background:var(--surface);
@@ -246,8 +268,43 @@
       <div class="brand">Racha de Flexiones</div>
       <div class="today-date" id="todayDate"></div>
     </div>
+    <div class="user-chip" id="userChip" hidden>
+      <span class="user-name" id="userName"></span>
+      <button class="logout-btn" id="logoutBtn" type="button">Salir</button>
+    </div>
   </div>
 
+  <div id="authView">
+    <div class="card" id="authCard">
+      <div class="seg-control" role="tablist" aria-label="Acceso">
+        <button class="seg-btn" data-authtab="login" type="button" role="tab" aria-selected="true">Iniciar sesión</button>
+        <button class="seg-btn" data-authtab="signup" type="button" role="tab" aria-selected="false">Crear cuenta</button>
+      </div>
+      <form class="auth-form" id="loginForm">
+        <label class="field-label" for="loginEmail">Correo</label>
+        <input type="email" id="loginEmail" autocomplete="email" required>
+        <label class="field-label" for="loginPassword">Contraseña</label>
+        <input type="password" id="loginPassword" autocomplete="current-password" required>
+        <button class="btn auth-submit" type="submit">Entrar</button>
+      </form>
+      <form class="auth-form" id="signupForm" style="display:none;">
+        <label class="field-label" for="signupName">Tu nombre</label>
+        <input type="text" id="signupName" autocomplete="name" required>
+        <label class="field-label" for="signupEmail">Correo</label>
+        <input type="email" id="signupEmail" autocomplete="email" required>
+        <label class="field-label" for="signupPassword">Contraseña (mín. 6 caracteres)</label>
+        <input type="password" id="signupPassword" autocomplete="new-password" minlength="6" required>
+        <button class="btn auth-submit" type="submit">Crear cuenta</button>
+      </form>
+      <div class="auth-msg" id="authMsg" role="status"></div>
+    </div>
+    <div class="card" id="setupNotice" hidden>
+      <div class="chart-title">Configuración pendiente</div>
+      <p class="setup-note">Falta conectar esta app con Supabase: añade tu <code>SUPABASE_URL</code> y <code>SUPABASE_ANON_KEY</code> en las constantes al inicio del <code>&lt;script&gt;</code>.</p>
+    </div>
+  </div>
+
+  <div id="appView" hidden>
   <div class="card">
     <div class="hero-top">
       <div class="ring-wrap">
@@ -355,19 +412,25 @@
     </div>
   </div>
 
-  <div class="offline-note" id="offlineNote" style="display:none;">Tus registros se guardan solo en este dispositivo (localStorage).</div>
+  <div class="offline-note" id="offlineNote" style="display:none;"></div>
+  </div>
 </div>
 
 <script>
 (function(){
+  var SUPABASE_URL = 'https://YOUR-PROJECT.supabase.co';
+  var SUPABASE_ANON_KEY = 'YOUR-ANON-PUBLIC-KEY';
+  var sb = (window.supabase && SUPABASE_URL.indexOf('YOUR-PROJECT') === -1)
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
+
   var RING_R = 56, RING_C = 2 * Math.PI * RING_R;
   var DEFAULT_GOAL = 50;
-  var state = { days: {}, goal: DEFAULT_GOAL, goalEnabled: false, usingDb: false };
+  var state = { days: {}, goal: DEFAULT_GOAL, goalEnabled: false, userId: null };
   var now0 = new Date();
   state.viewYear = now0.getFullYear();
   state.viewMonth = now0.getMonth();
   state.chartPeriod = 'week';
-  var db = null;
   var STAR_PATH = 'M12 2l2.9 6.2 6.8.9-4.9 4.7 1.2 6.8L12 17.6 5.9 20.6l1.2-6.8L2.2 9.1l6.8-.9L12 2z';
   var STAR_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+STAR_PATH+'"></path></svg>';
 
@@ -384,43 +447,40 @@
     document.getElementById('todayDate').textContent = s;
   }
 
-  // ---- storage backends ----
-  function loadLocal(){
-    try{
-      var raw = localStorage.getItem('flexiones.days');
-      state.days = raw ? JSON.parse(raw) : {};
-      var g = localStorage.getItem('flexiones.goal');
-      state.goal = g ? parseInt(g,10) : DEFAULT_GOAL;
-      state.goalEnabled = localStorage.getItem('flexiones.goalEnabled') === 'true';
-    }catch(e){ state.days = {}; state.goal = DEFAULT_GOAL; state.goalEnabled = false; }
-    render();
+  // ---- storage (Supabase) ----
+  function showSyncError(msg){
+    var el = document.getElementById('offlineNote');
+    el.textContent = msg || 'No se pudo guardar el último cambio. Revisa tu conexión.';
+    el.style.display = 'block';
   }
-  function saveLocalDays(){
-    try{ localStorage.setItem('flexiones.days', JSON.stringify(state.days)); }catch(e){}
-  }
-  function saveLocalGoal(){
-    try{
-      localStorage.setItem('flexiones.goal', String(state.goal));
-      localStorage.setItem('flexiones.goalEnabled', String(state.goalEnabled));
-    }catch(e){}
+  function clearSyncError(){
+    document.getElementById('offlineNote').style.display = 'none';
   }
 
   function writeDay(dateStr, dayData){
-    if(state.usingDb){
-      db.collection('days').doc(dateStr).set(dayData).catch(function(){});
-    } else {
-      state.days[dateStr] = dayData;
-      saveLocalDays();
-      render();
-    }
+    state.days[dateStr] = dayData;
+    render();
+    if(!sb || !state.userId) return;
+    sb.from('days').upsert({
+      user_id: state.userId,
+      date: dateStr,
+      total: dayData.total,
+      sets: dayData.sets,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id,date' }).then(function(res){
+      if(res.error){ showSyncError(); } else { clearSyncError(); }
+    });
   }
   function writeGoalConfig(){
-    if(state.usingDb){
-      db.doc('config/goal').set({ dailyGoal: state.goal, enabled: state.goalEnabled }).catch(function(){});
-    } else {
-      saveLocalGoal();
-      render();
-    }
+    render();
+    if(!sb || !state.userId) return;
+    sb.from('settings').upsert({
+      user_id: state.userId,
+      daily_goal: state.goal,
+      goal_enabled: state.goalEnabled
+    }, { onConflict: 'user_id' }).then(function(res){
+      if(res.error){ showSyncError(); } else { clearSyncError(); }
+    });
   }
   function writeGoal(g){
     state.goal = g;
@@ -735,38 +795,106 @@
     document.getElementById('goalDisplayRow').style.display = 'flex';
   });
 
+  // ---- auth ----
+  function setAuthMsg(text, kind){
+    var el = document.getElementById('authMsg');
+    el.textContent = text;
+    el.className = 'auth-msg' + (kind ? ' '+kind : '');
+  }
+  function setView(loggedIn){
+    document.getElementById('authView').hidden = loggedIn;
+    document.getElementById('appView').hidden = !loggedIn;
+    document.getElementById('userChip').hidden = !loggedIn;
+  }
+
+  document.querySelectorAll('[data-authtab]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var tab = btn.getAttribute('data-authtab');
+      document.querySelectorAll('[data-authtab]').forEach(function(b){ b.setAttribute('aria-selected', b === btn ? 'true' : 'false'); });
+      document.getElementById('loginForm').style.display = tab === 'login' ? 'flex' : 'none';
+      document.getElementById('signupForm').style.display = tab === 'signup' ? 'flex' : 'none';
+      setAuthMsg('', '');
+    });
+  });
+
+  document.getElementById('loginForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    if(!sb) return;
+    setAuthMsg('Entrando…', 'info');
+    var email = document.getElementById('loginEmail').value.trim();
+    var password = document.getElementById('loginPassword').value;
+    sb.auth.signInWithPassword({ email: email, password: password }).then(function(res){
+      if(res.error){ setAuthMsg(res.error.message === 'Invalid login credentials' ? 'Correo o contraseña incorrectos.' : res.error.message, 'error'); }
+    });
+  });
+
+  document.getElementById('signupForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    if(!sb) return;
+    setAuthMsg('Creando cuenta…', 'info');
+    var name = document.getElementById('signupName').value.trim();
+    var email = document.getElementById('signupEmail').value.trim();
+    var password = document.getElementById('signupPassword').value;
+    sb.auth.signUp({ email: email, password: password, options: { data: { display_name: name } } }).then(function(res){
+      if(res.error){ setAuthMsg(res.error.message, 'error'); return; }
+      if(!(res.data && res.data.session)){
+        setAuthMsg('Cuenta creada. Revisa tu correo para confirmarla y luego inicia sesión.', 'info');
+      }
+    });
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', function(){
+    if(!sb) return;
+    sb.auth.signOut();
+  });
+
+  function loadUserData(user){
+    state.userId = user.id;
+    document.getElementById('userChip').hidden = false;
+    document.getElementById('userName').textContent = user.email ? user.email.split('@')[0] : 'Usuario';
+
+    sb.from('profiles').select('display_name').eq('id', user.id).single().then(function(res){
+      if(res.data && res.data.display_name){
+        document.getElementById('userName').textContent = res.data.display_name;
+      }
+    });
+
+    Promise.all([
+      sb.from('settings').select('daily_goal, goal_enabled').eq('user_id', user.id).single(),
+      sb.from('days').select('date, total, sets').eq('user_id', user.id).order('date', { ascending:false }).limit(400)
+    ]).then(function(results){
+      var settingsRes = results[0], daysRes = results[1];
+      state.goal = (settingsRes.data && settingsRes.data.daily_goal) || DEFAULT_GOAL;
+      state.goalEnabled = !!(settingsRes.data && settingsRes.data.goal_enabled);
+      var map = {};
+      (daysRes.data || []).forEach(function(row){
+        map[row.date] = { date: row.date, total: row.total, sets: row.sets || [] };
+      });
+      state.days = map;
+      setView(true);
+      clearSyncError();
+      render();
+    });
+  }
+
   // ---- init ----
   headerDate();
   render();
 
-  (async function(){
-    try{
-      db = await claude.use('db');
-    }catch(e){ db = null; }
-    if(!db){
-      document.getElementById('offlineNote').style.display = 'block';
-      loadLocal();
-      return;
-    }
-    state.usingDb = true;
-    db.collection('days').orderBy('date','desc').limit(366).onSnapshot(function(snap){
-      var map = {};
-      snap.docs.forEach(function(doc){
-        var data = doc.data();
-        map[data.date] = data;
-      });
-      state.days = map;
-      render();
-    }, function(){
-      document.getElementById('offlineNote').style.display = 'block';
+  if(sb){
+    sb.auth.onAuthStateChange(function(event, session){
+      if(session && session.user){
+        loadUserData(session.user);
+      } else {
+        state.days = {}; state.goal = DEFAULT_GOAL; state.goalEnabled = false; state.userId = null;
+        setView(false);
+        render();
+      }
     });
-    db.doc('config/goal').onSnapshot(function(snap){
-      var d = snap.exists ? snap.data() : {};
-      state.goal = d.dailyGoal || DEFAULT_GOAL;
-      state.goalEnabled = !!d.enabled;
-      render();
-    }, function(){});
-  })();
+  } else {
+    document.getElementById('setupNotice').hidden = false;
+    document.getElementById('authCard').hidden = true;
+  }
 })();
 </script>
 </body>
