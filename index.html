@@ -124,6 +124,8 @@
   .auth-msg-icon svg{ width:100%; height:100%; }
   .setup-note{ font-size:13.5px; color:var(--ink-muted); line-height:1.5; margin-top:8px; }
   .setup-note code{ font-family:"IBM Plex Mono", monospace; font-size:12.5px; background:var(--surface-2); padding:1px 5px; border-radius:5px; }
+  .forgot-link{ border:none; background:none; color:var(--ink-muted); font-size:12px; cursor:pointer; padding:4px 0; text-align:left; text-decoration:underline; text-underline-offset:2px; margin-top:4px; }
+  .forgot-link:hover{ color:var(--accent); }
 
   .card{
     background:var(--surface);
@@ -308,6 +310,7 @@
         <label class="field-label" for="loginPassword">Contraseña</label>
         <input type="password" id="loginPassword" autocomplete="current-password" required>
         <button class="btn auth-submit" type="submit">Entrar</button>
+        <button class="forgot-link" id="forgotBtn" type="button">¿Olvidaste tu contraseña?</button>
       </form>
       <form class="auth-form" id="signupForm" style="display:none;">
         <label class="field-label" for="signupName">Tu nombre</label>
@@ -323,6 +326,20 @@
     <div class="card" id="setupNotice" hidden>
       <div class="chart-title">Configuración pendiente</div>
       <p class="setup-note">Falta conectar esta app con Supabase: añade tu <code>SUPABASE_URL</code> y <code>SUPABASE_ANON_KEY</code> en las constantes al inicio del <code>&lt;script&gt;</code>.</p>
+    </div>
+  </div>
+
+  <div id="recoveryView" hidden>
+    <div class="card">
+      <div class="chart-title">Nueva contraseña</div>
+      <form class="auth-form" id="recoveryForm">
+        <label class="field-label" for="recoveryPassword">Nueva contraseña</label>
+        <input type="password" id="recoveryPassword" autocomplete="new-password" minlength="6" required>
+        <label class="field-label" for="recoveryPassword2">Repite la contraseña</label>
+        <input type="password" id="recoveryPassword2" autocomplete="new-password" minlength="6" required>
+        <button class="btn auth-submit" type="submit">Guardar contraseña</button>
+      </form>
+      <div class="auth-msg" id="recoveryMsg" role="status"></div>
     </div>
   </div>
 
@@ -970,8 +987,8 @@
   var CHECK_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 20.6 7.4 19.2 6z"></path></svg>';
   var CROSS_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.3 5.7 12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7 4.3 4.3l6.3 6.3 6.3-6.3z"></path></svg>';
 
-  function setAuthMsg(text, kind){
-    var el = document.getElementById('authMsg');
+  function setMsg(elId, text, kind){
+    var el = document.getElementById(elId);
     el.className = 'auth-msg' + (kind ? ' '+kind : '');
     el.innerHTML = '';
     if(kind === 'success' || kind === 'error'){
@@ -984,11 +1001,19 @@
     textEl.textContent = text;
     el.appendChild(textEl);
   }
+  function setAuthMsg(text, kind){ setMsg('authMsg', text, kind); }
   function delay(ms){ return new Promise(function(resolve){ setTimeout(resolve, ms); }); }
   function setView(loggedIn){
+    document.getElementById('recoveryView').hidden = true;
     document.getElementById('authView').hidden = loggedIn;
     document.getElementById('appView').hidden = !loggedIn;
     document.getElementById('userChip').hidden = !loggedIn;
+  }
+  function showRecoveryView(){
+    document.getElementById('authView').hidden = true;
+    document.getElementById('appView').hidden = true;
+    document.getElementById('userChip').hidden = true;
+    document.getElementById('recoveryView').hidden = false;
   }
   function resetAuthView(){
     document.getElementById('loginForm').reset();
@@ -1048,6 +1073,40 @@
     sb.auth.signOut();
   });
 
+  document.getElementById('forgotBtn').addEventListener('click', function(){
+    if(!sb) return;
+    var email = document.getElementById('loginEmail').value.trim();
+    if(!email){ setAuthMsg('Escribe tu correo arriba primero.', 'error'); return; }
+    setAuthMsg('Enviando enlace…', 'info');
+    sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname }).then(function(res){
+      if(res.error){ setAuthMsg(res.error.message, 'error'); }
+      else { setAuthMsg('Revisa tu correo para restablecer la contraseña.', 'success'); }
+    });
+  });
+
+  document.getElementById('recoveryForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    if(!sb) return;
+    var p1 = document.getElementById('recoveryPassword').value;
+    var p2 = document.getElementById('recoveryPassword2').value;
+    if(p1 !== p2){ setMsg('recoveryMsg', 'Las contraseñas no coinciden.', 'error'); return; }
+    if(p1.length < 6){ setMsg('recoveryMsg', 'Debe tener al menos 6 caracteres.', 'error'); return; }
+    setMsg('recoveryMsg', 'Guardando…', 'info');
+    sb.auth.updateUser({ password: p1 }).then(function(res){
+      if(res.error){ setMsg('recoveryMsg', res.error.message, 'error'); return; }
+      setMsg('recoveryMsg', 'Contraseña actualizada', 'success');
+      delay(600).then(function(){
+        sb.auth.getSession().then(function(sres){
+          if(sres.data && sres.data.session && sres.data.session.user){
+            loadUserData(sres.data.session.user);
+          } else {
+            setView(false);
+          }
+        });
+      });
+    });
+  });
+
   function loadUserData(user){
     state.userId = user.id;
     document.getElementById('userChip').hidden = false;
@@ -1084,6 +1143,10 @@
 
   if(sb){
     sb.auth.onAuthStateChange(function(event, session){
+      if(event === 'PASSWORD_RECOVERY'){
+        showRecoveryView();
+        return;
+      }
       if(session && session.user){
         loadUserData(session.user);
       } else {
