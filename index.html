@@ -614,7 +614,7 @@
       var dd = new Date(d);
       dd.setDate(d.getDate()-i);
       var ds = fmtDate(dd);
-      arr.push({ date: ds, count: dayTotal(ds), weekday: WEEKDAY_SHORT[dd.getDay()], dayNum: dd.getDate(), monthIdx: dd.getMonth(), isToday: ds === todayStr() });
+      arr.push({ date: ds, count: dayTotal(ds), weekday: WEEKDAY_SHORT[dd.getDay()], dayNum: dd.getDate(), isToday: ds === todayStr() });
     }
     return arr;
   }
@@ -629,6 +629,21 @@
       var sum = 0;
       for(var day=1; day<=dim; day++){ sum += dayTotal(y+'-'+pad(m+1)+'-'+pad(day)); }
       arr.push({ y:y, m:m, count: sum, label: MONTH_SHORT[m], isToday: (y===d.getFullYear() && m===d.getMonth()) });
+    }
+    return arr;
+  }
+
+  function computeLastNYears(n){
+    var sums = {};
+    Object.keys(state.days).forEach(function(d){
+      var y = d.slice(0,4);
+      sums[y] = (sums[y]||0) + (state.days[d].total||0);
+    });
+    var arr = [];
+    var current = new Date().getFullYear();
+    for(var i=n-1;i>=0;i--){
+      var y = current - i;
+      arr.push({ y:y, count: sums[String(y)] || 0, label: String(y), isToday: y === current });
     }
     return arr;
   }
@@ -759,12 +774,12 @@
     document.getElementById('calNext').disabled = (y === n.getFullYear() && m === n.getMonth());
   }
 
-  var CHART_TITLES = { week:'Últimos 7 días', month:'Últimos 30 días', year:'Últimos 12 meses' };
+  var CHART_TITLES = { week:'Últimos 7 días', month:'Últimos 12 meses', year:'Últimos 5 años' };
 
   function renderChart(goal){
     var period = state.chartPeriod;
-    var data = period === 'year' ? computeLast12Months() : computeLastNDays(period === 'month' ? 30 : 7);
-    var showGoal = state.goalEnabled && period !== 'year';
+    var data = period === 'year' ? computeLastNYears(5) : (period === 'month' ? computeLast12Months() : computeLastNDays(7));
+    var showGoal = state.goalEnabled && period === 'week';
 
     document.getElementById('chartTitle').textContent = CHART_TITLES[period];
     document.getElementById('chartGoalNote').style.display = showGoal ? 'flex' : 'none';
@@ -779,7 +794,7 @@
     var n = data.length;
     var slot = plotW / n;
     var barW = Math.max(4, slot * 0.6);
-    var labelEvery = period === 'month' ? 5 : 1;
+    var labelEvery = 1;
 
     function yFor(v){ return padT + plotH - (v/maxVal)*plotH; }
 
@@ -803,9 +818,9 @@
         var tick;
         if(period === 'year'){
           tick = item.label;
-          if(j === 0 || item.y !== data[j-1].y){ tick += ' \''+String(item.y).slice(-2); }
         } else if(period === 'month'){
-          tick = item.dayNum+' '+MONTH_SHORT[item.monthIdx];
+          tick = item.label;
+          if(j === 0 || item.y !== data[j-1].y){ tick += ' \''+String(item.y).slice(-2); }
         } else {
           tick = item.weekday;
         }
@@ -825,6 +840,8 @@
         var wrapRect = wrap.getBoundingClientRect();
         var label;
         if(period === 'year'){
+          label = String(item.y);
+        } else if(period === 'month'){
           label = new Date(item.y, item.m, 1).toLocaleDateString('es-ES', { month:'long', year:'numeric' });
           label = label.charAt(0).toUpperCase()+label.slice(1);
         } else {
@@ -1120,7 +1137,7 @@
 
     Promise.all([
       sb.from('settings').select('daily_goal, goal_enabled').eq('user_id', user.id).single(),
-      sb.from('days').select('date, total, sets').eq('user_id', user.id).order('date', { ascending:false }).limit(400),
+      sb.from('days').select('date, total, sets').eq('user_id', user.id).order('date', { ascending:false }).limit(3660),
       delay(500)
     ]).then(function(results){
       var settingsRes = results[0], daysRes = results[1];
