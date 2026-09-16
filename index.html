@@ -376,22 +376,6 @@
 
     <div class="goal-section">
       <div class="goal-toggle-row">
-        <span>Meta diaria</span>
-        <button class="switch" id="goalToggle" type="button" role="switch" aria-checked="false" aria-label="Activar meta diaria">
-          <span class="switch-knob"></span>
-        </button>
-      </div>
-      <div id="goalDetails" style="display:none;">
-        <form class="goal-form" id="goalForm">
-          <input type="number" min="1" step="1" id="goalInput" class="mono">
-          <button class="btn btn-outline" type="submit">Guardar</button>
-        </form>
-        <div class="remaining" id="remainingText">Faltan <b>50</b> para tu meta de hoy</div>
-      </div>
-    </div>
-
-    <div class="goal-section">
-      <div class="goal-toggle-row">
         <span>Registrar serie</span>
         <button class="switch" id="quickaddToggle" type="button" role="switch" aria-checked="true" aria-label="Mostrar registrar serie">
           <span class="switch-knob"></span>
@@ -416,6 +400,22 @@
             <button class="btn btn-outline" type="submit">Guardar</button>
           </form>
         </div>
+      </div>
+    </div>
+
+    <div class="goal-section">
+      <div class="goal-toggle-row">
+        <span>Meta diaria</span>
+        <button class="switch" id="goalToggle" type="button" role="switch" aria-checked="false" aria-label="Activar meta diaria">
+          <span class="switch-knob"></span>
+        </button>
+      </div>
+      <div id="goalDetails" style="display:none;">
+        <form class="goal-form" id="goalForm">
+          <input type="number" min="1" step="1" id="goalInput" class="mono">
+          <button class="btn btn-outline" type="submit">Guardar</button>
+        </form>
+        <div class="remaining" id="remainingText">Faltan <b>50</b> para tu meta de hoy</div>
       </div>
     </div>
   </div>
