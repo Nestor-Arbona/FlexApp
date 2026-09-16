@@ -168,7 +168,6 @@
 
   .quickadd{ margin-top:16px; padding-top:16px; border-top:1px solid var(--line); }
   .quickadd-label{ font-size:12px; color:var(--ink-muted); margin-bottom:8px; }
-  .direct-total{ margin-top:16px; padding-top:16px; border-top:1px solid var(--line); }
   .quickadd-row{ display:flex; gap:8px; flex-wrap:wrap; }
   .qbtn{
     border:1px solid var(--line-strong); background:var(--surface-2); color:var(--ink);
@@ -376,6 +375,21 @@
 
     <div class="goal-section">
       <div class="goal-toggle-row">
+        <span>Añade tu registro</span>
+        <button class="switch" id="directTotalToggle" type="button" role="switch" aria-checked="true" aria-label="Mostrar añadir registro">
+          <span class="switch-knob"></span>
+        </button>
+      </div>
+      <div id="directTotalDetails">
+        <form class="custom-row" id="directTotalForm">
+          <input type="number" min="0" step="1" id="directTotalInput" class="mono">
+          <button class="btn btn-outline" type="submit">Guardar</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="goal-section">
+      <div class="goal-toggle-row">
         <span>Registrar serie</span>
         <button class="switch" id="quickaddToggle" type="button" role="switch" aria-checked="true" aria-label="Mostrar registrar serie">
           <span class="switch-knob"></span>
@@ -393,13 +407,6 @@
           <button class="btn" type="submit" id="customSubmitBtn">Añadir</button>
           <button class="btn btn-outline" type="button" id="editLastBtn" disabled>Editar</button>
         </form>
-        <div class="direct-total">
-          <div class="quickadd-label">O establece el total exacto de hoy</div>
-          <form class="custom-row" id="directTotalForm">
-            <input type="number" min="0" step="1" id="directTotalInput" class="mono">
-            <button class="btn btn-outline" type="submit">Guardar</button>
-          </form>
-        </div>
       </div>
     </div>
 
@@ -512,7 +519,7 @@
 
   var RING_R = 56, RING_C = 2 * Math.PI * RING_R;
   var DEFAULT_GOAL = 50;
-  var state = { days: {}, goal: DEFAULT_GOAL, goalEnabled: false, userId: null, editingIndex: null, quickaddVisible: true };
+  var state = { days: {}, goal: DEFAULT_GOAL, goalEnabled: false, userId: null, editingIndex: null, quickaddVisible: true, directTotalVisible: true };
   var now0 = new Date();
   state.viewYear = now0.getFullYear();
   state.viewMonth = now0.getMonth();
@@ -1056,6 +1063,11 @@
     state.quickaddVisible = !state.quickaddVisible;
     document.getElementById('quickaddToggle').setAttribute('aria-checked', state.quickaddVisible ? 'true' : 'false');
     document.getElementById('quickaddDetails').style.display = state.quickaddVisible ? 'block' : 'none';
+  });
+  document.getElementById('directTotalToggle').addEventListener('click', function(){
+    state.directTotalVisible = !state.directTotalVisible;
+    document.getElementById('directTotalToggle').setAttribute('aria-checked', state.directTotalVisible ? 'true' : 'false');
+    document.getElementById('directTotalDetails').style.display = state.directTotalVisible ? 'block' : 'none';
   });
   document.getElementById('goalForm').addEventListener('submit', function(e){
     e.preventDefault();
