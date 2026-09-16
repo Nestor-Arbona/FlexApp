@@ -187,7 +187,7 @@
   .btn-outline:disabled{ opacity:0.4; cursor:default; pointer-events:none; }
 
   /* stats row */
-  .stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .stats{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
   .stat{ background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:14px 12px; box-shadow:var(--shadow); }
   .stat-label{ font-size:11px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:0.07em; margin-bottom:6px; }
   .stat-value{ font-family:"Big Shoulders Display", sans-serif; font-weight:700; font-size:26px; line-height:1; display:flex; align-items:baseline; gap:4px; }
@@ -382,11 +382,15 @@
       <div class="stat-value mono"><span id="streakVal">0</span><small>días</small></div>
     </div>
     <div class="stat">
-      <div class="stat-label">Semana</div>
+      <div class="stat-label">Total mensual</div>
+      <div class="stat-value mono"><span id="monthVal">0</span><small>flex.</small></div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Total semanal</div>
       <div class="stat-value mono"><span id="weekVal">0</span><small>flex.</small></div>
     </div>
     <div class="stat">
-      <div class="stat-label">Promedio</div>
+      <div class="stat-label">Media semanal</div>
       <div class="stat-value mono"><span id="avgVal">0</span><small>/día</small></div>
     </div>
   </div>
@@ -627,6 +631,16 @@
     return { max: max, dates: dates };
   }
 
+  function computeMonth(){
+    var now = new Date();
+    var y = now.getFullYear(), m = now.getMonth();
+    var sum = 0;
+    for(var day=1; day<=now.getDate(); day++){
+      sum += dayTotal(y+'-'+pad(m+1)+'-'+pad(day));
+    }
+    return sum;
+  }
+
   function computeWeek(){
     var d = new Date(); var sum = 0;
     for(var i=0;i<7;i++){
@@ -668,6 +682,7 @@
     }
 
     document.getElementById('streakVal').textContent = computeStreak();
+    document.getElementById('monthVal').textContent = computeMonth();
     var week = computeWeek();
     document.getElementById('weekVal').textContent = week;
     document.getElementById('avgVal').textContent = Math.round(week/7);
