@@ -137,7 +137,7 @@
   .eyebrow{ font-size:11px; letter-spacing:0.09em; text-transform:uppercase; color:var(--ink-faint); font-weight:600; }
 
   /* hero */
-  .hero-top{ display:flex; align-items:center; gap:20px; flex-wrap:wrap; }
+  .hero-top{ display:flex; align-items:center; justify-content:center; gap:20px; flex-wrap:wrap; }
   .ring-wrap{ position:relative; width:132px; height:132px; flex:none; }
   .ring-wrap svg{ width:100%; height:100%; transform:rotate(-90deg); }
   .ring-track{ fill:none; stroke:var(--line-strong); stroke-width:10; }
@@ -146,19 +146,15 @@
   .ring-number{ font-family:"Big Shoulders Display", sans-serif; font-weight:800; font-size:40px; line-height:1; }
   .ring-label{ font-size:11px; color:var(--ink-muted); text-transform:uppercase; letter-spacing:0.06em; margin-top:2px; }
 
-  .goal-col{ flex:1 1 140px; min-width:140px; display:flex; flex-direction:column; gap:10px; }
+  .goal-section{ margin-top:16px; padding-top:16px; border-top:1px solid var(--line); display:flex; flex-direction:column; gap:10px; }
   .goal-toggle-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:14px; color:var(--ink-muted); }
   .switch{ flex:none; position:relative; width:38px; height:22px; border-radius:999px; border:none; background:var(--line-strong); cursor:pointer; padding:0; transition:background .15s; }
   .switch[aria-checked="true"]{ background:var(--accent); }
   .switch-knob{ position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:var(--surface); box-shadow:0 1px 2px rgba(0,0,0,0.25); transition:transform .15s; }
   .switch[aria-checked="true"] .switch-knob{ transform:translateX(16px); }
-  .goal-row{ display:flex; align-items:baseline; gap:6px; font-size:14px; color:var(--ink-muted); }
-  .goal-row b{ color:var(--ink); font-size:15px; }
-  .goal-edit-btn{ border:none; background:none; color:var(--accent); font-size:12.5px; font-weight:600; cursor:pointer; padding:2px 0; text-align:left; }
-  .goal-edit-btn:hover{ text-decoration:underline; }
-  .goal-form{ display:flex; gap:6px; }
-  .goal-form input{ width:64px; }
-  .remaining{ font-size:13px; color:var(--ink-muted); margin-top:6px; }
+  .goal-form{ display:flex; gap:8px; align-items:center; }
+  .goal-form input{ width:80px; flex:none; }
+  .remaining{ font-size:13px; color:var(--ink-muted); }
   .remaining b{ color:var(--accent2); }
 
   .quickadd{ margin-top:16px; padding-top:16px; border-top:1px solid var(--line); }
@@ -356,25 +352,6 @@
           <div class="ring-label">hoy</div>
         </div>
       </div>
-      <div class="goal-col">
-        <div class="goal-toggle-row">
-          <span>Meta diaria</span>
-          <button class="switch" id="goalToggle" type="button" role="switch" aria-checked="false" aria-label="Activar meta diaria">
-            <span class="switch-knob"></span>
-          </button>
-        </div>
-        <div id="goalDetails" style="display:none;">
-          <div class="goal-row" id="goalDisplayRow">
-            <b class="mono" id="goalValueText">50</b>
-            <button class="goal-edit-btn" id="editGoalBtn" type="button">editar</button>
-          </div>
-          <form class="goal-form" id="goalForm" style="display:none;">
-            <input type="number" min="1" step="1" id="goalInput" class="mono">
-            <button class="btn" type="submit">Guardar</button>
-          </form>
-          <div class="remaining" id="remainingText">Faltan <b>50</b> para tu meta de hoy</div>
-        </div>
-      </div>
     </div>
 
     <div class="quickadd">
@@ -390,6 +367,22 @@
         <button class="btn" type="submit" id="customSubmitBtn">Añadir</button>
         <button class="btn btn-outline" type="button" id="editLastBtn" disabled>Editar</button>
       </form>
+    </div>
+
+    <div class="goal-section">
+      <div class="goal-toggle-row">
+        <span>Meta diaria</span>
+        <button class="switch" id="goalToggle" type="button" role="switch" aria-checked="false" aria-label="Activar meta diaria">
+          <span class="switch-knob"></span>
+        </button>
+      </div>
+      <div id="goalDetails" style="display:none;">
+        <form class="goal-form" id="goalForm">
+          <input type="number" min="1" step="1" id="goalInput" class="mono">
+          <button class="btn btn-outline" type="submit">Guardar</button>
+        </form>
+        <div class="remaining" id="remainingText">Faltan <b>50</b> para tu meta de hoy</div>
+      </div>
     </div>
   </div>
 
@@ -689,7 +682,6 @@
     var goal = state.goal || DEFAULT_GOAL;
 
     document.getElementById('todayCount').textContent = todayEntry.total;
-    document.getElementById('goalValueText').textContent = goal;
 
     var hasSets = !!(todayEntry.sets && todayEntry.sets.length);
     if(state.editingIndex !== null && (!hasSets || state.editingIndex >= todayEntry.sets.length)){
@@ -700,6 +692,8 @@
     var goalToggle = document.getElementById('goalToggle');
     goalToggle.setAttribute('aria-checked', state.goalEnabled ? 'true' : 'false');
     document.getElementById('goalDetails').style.display = state.goalEnabled ? 'block' : 'none';
+    var goalInputEl = document.getElementById('goalInput');
+    if(document.activeElement !== goalInputEl){ goalInputEl.value = goal; }
 
     var pct = state.goalEnabled ? Math.min(1, todayEntry.total / goal) : 0;
     var ring = document.getElementById('ringFill');
@@ -984,20 +978,10 @@
   document.getElementById('goalToggle').addEventListener('click', function(){
     writeGoalEnabled(!state.goalEnabled);
   });
-  document.getElementById('editGoalBtn').addEventListener('click', function(){
-    document.getElementById('goalDisplayRow').style.display = 'none';
-    var form = document.getElementById('goalForm');
-    form.style.display = 'flex';
-    var input = document.getElementById('goalInput');
-    input.value = state.goal;
-    input.focus();
-  });
   document.getElementById('goalForm').addEventListener('submit', function(e){
     e.preventDefault();
     var v = parseInt(document.getElementById('goalInput').value,10);
     if(v > 0){ writeGoal(v); }
-    document.getElementById('goalForm').style.display = 'none';
-    document.getElementById('goalDisplayRow').style.display = 'flex';
   });
 
   // ---- auth ----
