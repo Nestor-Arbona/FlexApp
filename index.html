@@ -168,6 +168,7 @@
 
   .quickadd{ margin-top:16px; padding-top:16px; border-top:1px solid var(--line); }
   .quickadd-label{ font-size:12px; color:var(--ink-muted); margin-bottom:8px; }
+  .direct-total{ margin-top:16px; padding-top:16px; border-top:1px solid var(--line); }
   .quickadd-row{ display:flex; gap:8px; flex-wrap:wrap; }
   .qbtn{
     border:1px solid var(--line-strong); background:var(--surface-2); color:var(--ink);
@@ -408,6 +409,13 @@
           <button class="btn" type="submit" id="customSubmitBtn">Añadir</button>
           <button class="btn btn-outline" type="button" id="editLastBtn" disabled>Editar</button>
         </form>
+        <div class="direct-total">
+          <div class="quickadd-label">O establece el total exacto de hoy</div>
+          <form class="custom-row" id="directTotalForm">
+            <input type="number" min="0" step="1" id="directTotalInput" class="mono">
+            <button class="btn btn-outline" type="submit">Guardar</button>
+          </form>
+        </div>
       </div>
     </div>
   </div>
@@ -714,6 +722,8 @@
       exitEditMode();
     }
     document.getElementById('editLastBtn').disabled = !hasSets;
+    var directTotalInputEl = document.getElementById('directTotalInput');
+    if(document.activeElement !== directTotalInputEl){ directTotalInputEl.value = todayEntry.total; }
 
     var goalToggle = document.getElementById('goalToggle');
     goalToggle.setAttribute('aria-checked', state.goalEnabled ? 'true' : 'false');
@@ -1032,6 +1042,15 @@
   });
   document.getElementById('goalToggle').addEventListener('click', function(){
     writeGoalEnabled(!state.goalEnabled);
+  });
+  document.getElementById('directTotalForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var input = document.getElementById('directTotalInput');
+    var v = parseInt(input.value, 10);
+    if(isNaN(v) || v < 0) return;
+    var d = todayStr();
+    var sets = v > 0 ? [{ time:'', reps:v }] : [];
+    writeDay(d, { date:d, total:v, sets:sets, updatedAt: Date.now() });
   });
   document.getElementById('quickaddToggle').addEventListener('click', function(){
     state.quickaddVisible = !state.quickaddVisible;
