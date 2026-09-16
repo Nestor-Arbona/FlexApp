@@ -31,6 +31,7 @@
     --accent2-ink:#f7f5ee;
     --accent2-soft:rgba(28,136,116,0.13);
     --star:#c98a00;
+    --bad:#c93b3b;
     --shadow:0 1px 2px rgba(28,27,23,0.05), 0 10px 28px -16px rgba(28,27,23,0.28);
   }
   @media (prefers-color-scheme: dark){
@@ -51,6 +52,7 @@
       --accent2-ink:#0d2420;
       --accent2-soft:rgba(63,205,176,0.14);
       --star:#ffcf4d;
+      --bad:#ff6b64;
       --shadow:0 1px 2px rgba(0,0,0,0.35), 0 10px 28px -16px rgba(0,0,0,0.6);
     }
   }
@@ -71,6 +73,7 @@
     --accent2-ink:#0d2420;
     --accent2-soft:rgba(63,205,176,0.14);
     --star:#ffcf4d;
+    --bad:#ff6b64;
     --shadow:0 1px 2px rgba(0,0,0,0.35), 0 10px 28px -16px rgba(0,0,0,0.6);
   }
 
@@ -141,7 +144,13 @@
   .ring-wrap{ position:relative; width:132px; height:132px; flex:none; }
   .ring-wrap svg{ width:100%; height:100%; transform:rotate(-90deg); }
   .ring-track{ fill:none; stroke:var(--line-strong); stroke-width:10; }
-  .ring-fill{ fill:none; stroke:var(--accent); stroke-width:10; stroke-linecap:round; transition:stroke-dashoffset .5s cubic-bezier(.4,0,.2,1); }
+  .ring-fill{ fill:none; stroke:var(--accent); stroke-width:10; stroke-linecap:round; transition:stroke-dashoffset .5s cubic-bezier(.4,0,.2,1), stroke .2s; }
+  .ring-fill.neutral{ stroke:var(--ink-faint); }
+  .ring-fill.good{ stroke:var(--accent2); }
+  .ring-fill.bad{ stroke:var(--bad); }
+  .ring-wrap.small{ width:104px; height:104px; }
+  .ring-wrap.small .ring-number{ font-size:25px; }
+  .ring-wrap.small .ring-label{ font-size:10px; }
   .ring-center{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0; }
   .ring-number{ font-family:"Big Shoulders Display", sans-serif; font-weight:800; font-size:40px; line-height:1; }
   .ring-label{ font-size:11px; color:var(--ink-muted); text-transform:uppercase; letter-spacing:0.06em; margin-top:2px; }
@@ -341,8 +350,8 @@
 
   <div id="appView" hidden>
   <div class="card">
-    <div class="hero-top">
-      <div class="ring-wrap">
+    <div class="hero-top" id="heroRings">
+      <div class="ring-wrap" id="ringWrapToday">
         <svg viewBox="0 0 132 132">
           <circle class="ring-track" cx="66" cy="66" r="56"></circle>
           <circle class="ring-fill" id="ringFill" cx="66" cy="66" r="56" stroke-dasharray="351.86" stroke-dashoffset="351.86"></circle>
@@ -352,21 +361,16 @@
           <div class="ring-label">hoy</div>
         </div>
       </div>
-    </div>
-
-    <div class="quickadd">
-      <div class="quickadd-label">Registrar una serie</div>
-      <div class="quickadd-row">
-        <button class="qbtn" data-add="5" type="button">+5</button>
-        <button class="qbtn" data-add="10" type="button">+10</button>
-        <button class="qbtn" data-add="15" type="button">+15</button>
-        <button class="qbtn" data-add="20" type="button">+20</button>
+      <div class="ring-wrap small" id="ringWrapMonth" hidden>
+        <svg viewBox="0 0 132 132">
+          <circle class="ring-track" cx="66" cy="66" r="56"></circle>
+          <circle class="ring-fill good" id="monthRingFill" cx="66" cy="66" r="56" stroke-dasharray="351.86" stroke-dashoffset="351.86"></circle>
+        </svg>
+        <div class="ring-center">
+          <div class="ring-number" id="monthRingCount">0</div>
+          <div class="ring-label">mes</div>
+        </div>
       </div>
-      <form class="custom-row" id="customForm">
-        <input type="number" min="1" step="1" id="customInput" placeholder="Otra cantidad">
-        <button class="btn" type="submit" id="customSubmitBtn">Añadir</button>
-        <button class="btn btn-outline" type="button" id="editLastBtn" disabled>Editar</button>
-      </form>
     </div>
 
     <div class="goal-section">
@@ -382,6 +386,28 @@
           <button class="btn btn-outline" type="submit">Guardar</button>
         </form>
         <div class="remaining" id="remainingText">Faltan <b>50</b> para tu meta de hoy</div>
+      </div>
+    </div>
+
+    <div class="goal-section">
+      <div class="goal-toggle-row">
+        <span>Registrar serie</span>
+        <button class="switch" id="quickaddToggle" type="button" role="switch" aria-checked="true" aria-label="Mostrar registrar serie">
+          <span class="switch-knob"></span>
+        </button>
+      </div>
+      <div id="quickaddDetails">
+        <div class="quickadd-row">
+          <button class="qbtn" data-add="5" type="button">+5</button>
+          <button class="qbtn" data-add="10" type="button">+10</button>
+          <button class="qbtn" data-add="15" type="button">+15</button>
+          <button class="qbtn" data-add="20" type="button">+20</button>
+        </div>
+        <form class="custom-row" id="customForm">
+          <input type="number" min="1" step="1" id="customInput" placeholder="Otra cantidad">
+          <button class="btn" type="submit" id="customSubmitBtn">Añadir</button>
+          <button class="btn btn-outline" type="button" id="editLastBtn" disabled>Editar</button>
+        </form>
       </div>
     </div>
   </div>
@@ -478,7 +504,7 @@
 
   var RING_R = 56, RING_C = 2 * Math.PI * RING_R;
   var DEFAULT_GOAL = 50;
-  var state = { days: {}, goal: DEFAULT_GOAL, goalEnabled: false, userId: null, editingIndex: null };
+  var state = { days: {}, goal: DEFAULT_GOAL, goalEnabled: false, userId: null, editingIndex: null, quickaddVisible: true };
   var now0 = new Date();
   state.viewYear = now0.getFullYear();
   state.viewMonth = now0.getMonth();
@@ -695,20 +721,49 @@
     var goalInputEl = document.getElementById('goalInput');
     if(document.activeElement !== goalInputEl){ goalInputEl.value = goal; }
 
-    var pct = state.goalEnabled ? Math.min(1, todayEntry.total / goal) : 0;
+    var monthTotal = computeMonth();
     var ring = document.getElementById('ringFill');
-    ring.setAttribute('stroke-dasharray', RING_C.toFixed(2));
-    ring.setAttribute('stroke-dashoffset', (RING_C * (1-pct)).toFixed(2));
+    var ringWrapToday = document.getElementById('ringWrapToday');
+    var ringWrapMonth = document.getElementById('ringWrapMonth');
 
     if(state.goalEnabled){
+      ringWrapToday.classList.remove('small');
+      ringWrapMonth.hidden = true;
+      ring.classList.remove('neutral','good','bad');
+      var pct = Math.min(1, todayEntry.total / goal);
+      ring.setAttribute('stroke-dasharray', RING_C.toFixed(2));
+      ring.setAttribute('stroke-dashoffset', (RING_C * (1-pct)).toFixed(2));
+
       var remaining = Math.max(0, goal - todayEntry.total);
       document.getElementById('remainingText').innerHTML = remaining === 0
         ? '<b>Meta de hoy cumplida</b>'
         : 'Faltan <b>'+remaining+'</b> para tu meta de hoy';
+    } else {
+      ringWrapToday.classList.add('small');
+      ringWrapMonth.hidden = false;
+
+      var dayOfMonth = new Date().getDate();
+      var monthAvg = dayOfMonth > 0 ? monthTotal / dayOfMonth : 0;
+      var pctVsAvg, cls;
+      if(monthAvg <= 0){ pctVsAvg = 0; cls = 'neutral'; }
+      else if(todayEntry.total >= monthAvg){ pctVsAvg = 1; cls = 'good'; }
+      else { pctVsAvg = todayEntry.total / monthAvg; cls = 'bad'; }
+      ring.classList.remove('neutral','good','bad');
+      ring.classList.add(cls);
+      ring.setAttribute('stroke-dasharray', RING_C.toFixed(2));
+      ring.setAttribute('stroke-dashoffset', (RING_C * (1-pctVsAvg)).toFixed(2));
+
+      var now = new Date();
+      var daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+      var pctMonth = Math.min(1, now.getDate() / daysInMonth);
+      var monthRing = document.getElementById('monthRingFill');
+      monthRing.setAttribute('stroke-dasharray', RING_C.toFixed(2));
+      monthRing.setAttribute('stroke-dashoffset', (RING_C * (1-pctMonth)).toFixed(2));
+      document.getElementById('monthRingCount').textContent = monthTotal;
     }
 
     document.getElementById('streakVal').textContent = computeStreak();
-    document.getElementById('monthVal').textContent = computeMonth();
+    document.getElementById('monthVal').textContent = monthTotal;
     var week = computeWeek();
     document.getElementById('weekVal').textContent = week;
     document.getElementById('avgVal').textContent = Math.round(week/7);
@@ -977,6 +1032,11 @@
   });
   document.getElementById('goalToggle').addEventListener('click', function(){
     writeGoalEnabled(!state.goalEnabled);
+  });
+  document.getElementById('quickaddToggle').addEventListener('click', function(){
+    state.quickaddVisible = !state.quickaddVisible;
+    document.getElementById('quickaddToggle').setAttribute('aria-checked', state.quickaddVisible ? 'true' : 'false');
+    document.getElementById('quickaddDetails').style.display = state.quickaddVisible ? 'block' : 'none';
   });
   document.getElementById('goalForm').addEventListener('submit', function(e){
     e.preventDefault();
